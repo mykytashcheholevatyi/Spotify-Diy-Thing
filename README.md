@@ -1,6 +1,6 @@
-# Spotify-Diy-Thing
+# ESP32 Internet Info Display
 
-Something similar to the [Spotify Car Thing](https://carthing.spotify.com/), built with a cheap ESP32 Screen. Connects to your Spotify account and displays your currently playing song with its album art
+This project uses a cheap ESP32 Screen to display information from the internet, such as the current time.
 
 ![image](https://user-images.githubusercontent.com/1562562/221344692-7dd359d3-2e64-4a09-850b-b619477c5043.png)
 
@@ -43,82 +43,11 @@ All the parts can be purchased from Makerfabs.com:
 
 I've tried to design this project to be modular and have abstracted the display code behind an interface, so it should be pretty easy to get it up and running with a different type of display.
 
-## NFC Tags (Optional)
-
-One of the coolest parts about this project, in my opinion at least, is the ability to connect an NFC reader to control what songs/albums/playlists are being played.
-
-You can write the spotify URI or URL of the song, album or playlist to an NFC tag and when you swipe it off the reader, the device will tell your spotify account to play what it reads.
-
-If you aren't interested in this feature, you can just not connect it and the device will work without it.
-
-### PN532 NFC reader and Tags
-
-This code has been tested with these red PN532 NFC readers and cheap NFC stickers.
-
-To use the PN532 as an SPI device, you need to configure the toggle switches so switch 1 is down and 2 is up. (You may need to remove the sticker on top of it)
-
-#### Links
-
-- [PN532 NFC reader - Aliexpress\*](https://s.click.aliexpress.com/e/_DCanbAB)
-- [NFC Stickers - Aliexpress\*](https://s.click.aliexpress.com/e/_DkX2F5z)
-
-### Hardware support
-
-#### "Cheap Yellow Display" (CYD)
-
-The CYD does not have enough free pins to use an SPI device by default, and the NFC reader is quite slow over i2c, so we need to get creative.
-
-With the help of an "SD Card Sniffer", we can make use of the Micro SD slot of the CYD to connect the NFC reader to.
-
-##### Connections
-
-| Sniffer Board Label | ESP32 Pin | PN532 NFC |
-| ------------------- | --------- | --------- |
-| DAT2                | -         | -         |
-| CD                  | IO5       | CS        |
-| CMD                 | IO23      | DI / MOSI |
-| GND                 | GND       | GND       |
-| VCC                 | 3.3V      | VCC       |
-| CLK                 | IO18      | SCLK      |
-| DAT0                | IO19      | DO / MISO |
-| DAT1                | -         | -         |
-
-#### Links
-
-- [Micro SD Card Sniffer - Aliexpress\*](https://s.click.aliexpress.com/e/_Ddwcy9h)
-
-#### Matrix Panel (ESP32 Trinity)
-
-Again, it is designed for the ESP32 Trinity, but can work with any ESP32 that breaks out the required pins.
-
-The Trinity has some pins broken out that can be used for this purpose
-
-#### Connections
-
-| ESP32 Pin  | PN532 NFC |
-| ---------- | --------- |
-| IO22 (SCL) | CS        |
-| IO21 (SDA) | DI / MOSI |
-| GND        | GND       |
-| 3.3V       | VCC       |
-| IO33       | SCLK      |
-| IO32       | DO / MISO |
-
 ## Project Setup
 
 These steps only need to be run once.
 
-### Step 1 - Spotify Dev Account
-
-In order to use this project, you will need to create an application on the Spotify Developer Dashboard
-
-- Sign into the [Spotify Developer page](https://developer.spotify.com/dashboard/login)
-- Create a new application. (name it whatever you want). There is a section fo "callback URI" you can just make this "locahost" for now.
-- You will need the "client ID" and "client secret" from this page later in the steps
-
-You will need to add a callback URI for authentication process by clicking "Edit Settings", what URI to use will be displayed on screen in a later step.
-
-### Step 2 - Flash the Project
+### Step 1 - Flash the Project
 
 Flash the project directly from your browser [here](https://witnessmenow.github.io/Spotify-Diy-Thing) (Chrome & Edge only)
 
@@ -126,36 +55,28 @@ or
 
 Jump to the "code" section below
 
-### Step 3 - Adding your Wifi and Spotify Details
+### Step 2 - Adding your Wifi Details
 
-The device is now flashed with the code, but it doesn't know what your Wifi or Spotify details are.
+The device is now flashed with the code, but it doesn't know what your Wifi details are.
 
-In order to enter your wifi details, the project will host it's own wifi network. Connect to it using your phone.
+In order to enter your wifi details, the project will host its own wifi network. Connect to it using your phone.
 
-- SSID: SpotifyDiy
-- Password: thing123
+- SSID: ESP32InfoDisplay
+- Password: display123
 
 You should be automatically redirected to the config page.
 
 - Click Config
-- Enter your WIfi details (2.4Ghz only)
-- Enter the client Id and client secret from the earlier step
-- You can leave refresh token blank
+- Enter your Wifi details (2.4Ghz only)
 - Click save
 
 Note: If you ever need to get back into this config section, click reset button (the button closest to the side) twice.
 
-### Step 4 - Authenticating the device with your Spotify account
+### Step 3 - Displaying Information
 
-The final step is to connect this device to your Spotify account. When the Wifi is configured correctly, it will enter "Refresh Token Mode".
+The final step is to connect the device to the internet and start displaying information such as the current time.
 
-- Your device will now be connected to the Wifi details you gave it.
-- Go to the address displayed on screen using your phone or PC that is connected to the same network as your device.
-- On the webpage that loads there will be an address displayed in bold, add this to the callback URI section as mentioned in the Spotify API section
-- Click the `Spotify Auth` URL
-- You will need to give permission to the app you created to have access to your spotify account
-
-Your project should now be setup and will start displaying your currently playing music!
+Your project should now be setup and will start displaying the current time!
 
 ## Code
 
@@ -183,12 +104,10 @@ The following libraries need to be installed for this project to work:
 
 | Library Name/Link                                                                | Purpose                                    | Library manager                 |
 | -------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------- |
-| [SpotifyArduino](https://github.com/witnessmenow/spotify-api-arduino)            | For interacting with Spotify API           | No                              |
-| [ArduinoJson](https://github.com/bblanchon/ArduinoJson)                          | Dependancy of the Spotify API              | Yes ("Arduino Json")            |
-| [JPEGDEC](https://github.com/bitbank2/JPEGDEC)                                   | For decoding the album art images          | Yes ("JPEGDEC")                 |
+| [ArduinoJson](https://github.com/bblanchon/ArduinoJson)                          | For parsing JSON data                      | Yes ("Arduino Json")            |
+| [JPEGDEC](https://github.com/bitbank2/JPEGDEC)                                   | For decoding images                        | Yes ("JPEGDEC")                 |
 | [WifiManager - By Tzapu](https://github.com/tzapu/WiFiManager)                   | Captive portal for configuring the WiFi    | Yes ("WifiManager")             |
 | [ESP_DoubleResetDetector](https://github.com/khoih-prog/ESP_DoubleResetDetector) | Detecting double pressing the reset button | Yes ("ESP_DoubleResetDetector") |
-| [Seeed_Arduino_NFC](https://github.com/witnessmenow/Seeed_Arduino_NFC)           | For the NFC reader                         | No (it's a modified version)    |
 
 #### Cheap Yellow Display Specific libraries
 
@@ -211,6 +130,6 @@ TFT_eSPI is configured using a "User_Setup.h" file in the library folder, you wi
 
 #### Display Selection
 
-At the top of the `SpotifyDiyThing.ino` file, there is a section labeled "Display Type", follow the instructions there for how to enable the different displays.
+At the top of the `ESP32InfoDisplay.ino` file, there is a section labeled "Display Type", follow the instructions there for how to enable the different displays.
 
 Note: By default it will use the Cheap Yellow Display

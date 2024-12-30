@@ -1,5 +1,4 @@
 #include "spotifyDisplay.h"
-
 #include "touchScreen.h"
 
 #include <TFT_eSPI.h>
@@ -69,10 +68,8 @@ class CheapYellowDisplay : public SpotifyDisplay
 public:
   void displaySetup(SpotifyArduino *spotifyObj)
   {
-
     spotify_display = spotifyObj;
-
-    touchSetup(spotifyObj);
+    touchSetup();
 
     Serial.println("cyd display setup");
     setWidth(320);
@@ -90,13 +87,10 @@ public:
   void showDefaultScreen()
   {
     tft.fillScreen(TFT_BLACK);
-
-    drawTouchButtons(false, false);
   }
 
   void displayTrackProgress(long progress, long duration)
   {
-
     //  Serial.print("Elapsed time of song (ms): ");
     //  Serial.print(progress);
     //  Serial.print(" of ");
@@ -134,20 +128,16 @@ public:
 
   void checkForInput()
   {
-    if (millis() > touchScreenCoolDownTime && handleTouched())
-    {
+    if (millis() > touchScreenCoolDownTime && handleTouched()) {
       drawTouchButtons(previousTrackStatus, nextTrackStatus);
-      if (previousTrackStatus)
-      {
+      if (previousTrackStatus) {
         spotify_display->previousTrack();
-      }
-      else if (nextTrackStatus)
-      {
+      } else if (nextTrackStatus) {
         spotify_display->nextTrack();
       }
       drawTouchButtons(false, false);
-      requestDueTime = 0;                                               // Some button has been pressed and acted on, it surely impacts the status so force a refresh
-      touchScreenCoolDownTime = millis() + touchScreenCoolDownInterval; // Cool the touch off
+      requestDueTime = 0;
+      touchScreenCoolDownTime = millis() + touchScreenCoolDownInterval;
     }
   }
 
@@ -239,13 +229,19 @@ public:
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
   }
 
+  void printTimeToScreen(String time)
+  {
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.drawCentreString(time, screenCenterX, screenCenterY, 4);
+  }
+
 private:
-  unsigned long touchScreenCoolDownInterval = 200; // How long after a touch press do we accept another (0.2 seconds). There is also an APi request inbetween
-  unsigned long touchScreenCoolDownTime;           // time when cool down has expired
+  unsigned long touchScreenCoolDownInterval = 200;
+  unsigned long touchScreenCoolDownTime;
 
   int displayImageUsingFile(char *albumArtUrl)
   {
-
     // In this example I reuse the same filename
     // over and over, maybe saving the art using
     // the album URI as the name would be better
@@ -301,40 +297,26 @@ private:
     return decodeStatus;
   }
 
-  void drawTouchButtons(bool backStatus, bool forwardStatus)
-  {
-
+  void drawTouchButtons(bool backStatus, bool forwardStatus) {
     int buttonCenterY = 75;
     int leftButtonCenterX = 40;
     int rightButtonCenterX = screenWidth - leftButtonCenterX;
-
-    // Draw back Button
     tft.fillCircle(leftButtonCenterX, buttonCenterY, 16, TFT_BLACK);
     tft.drawCircle(leftButtonCenterX, buttonCenterY, 16, TFT_WHITE);
-    if (backStatus)
-    {
+    if (backStatus) {
       tft.fillCircle(leftButtonCenterX, buttonCenterY, 15, TFT_GREEN);
-    }
-    else
-    {
+    } else {
       tft.drawCircle(leftButtonCenterX, buttonCenterY, 15, TFT_WHITE);
     }
-
     tft.fillTriangle(leftButtonCenterX - 4, buttonCenterY, leftButtonCenterX + 6, buttonCenterY - 10, leftButtonCenterX + 6, buttonCenterY + 10, TFT_WHITE);
     tft.drawRect(leftButtonCenterX - 6, buttonCenterY - 10, 2, 20, TFT_WHITE);
-
-    // Draw forward Button
     tft.fillCircle(rightButtonCenterX, buttonCenterY, 16, TFT_BLACK);
     tft.drawCircle(rightButtonCenterX, buttonCenterY, 16, TFT_WHITE);
-    if (forwardStatus)
-    {
+    if (forwardStatus) {
       tft.fillCircle(rightButtonCenterX, buttonCenterY, 15, TFT_GREEN);
-    }
-    else
-    {
+    } else {
       tft.drawCircle(rightButtonCenterX, buttonCenterY, 15, TFT_WHITE);
     }
-
     tft.fillTriangle(rightButtonCenterX + 4, buttonCenterY, rightButtonCenterX - 6, buttonCenterY - 10, rightButtonCenterX - 6, buttonCenterY + 10, TFT_WHITE);
     tft.drawRect(rightButtonCenterX + 6, buttonCenterY - 10, 2, 20, TFT_WHITE);
   }

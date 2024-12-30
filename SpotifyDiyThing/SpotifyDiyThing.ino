@@ -1,5 +1,5 @@
 /*******************************************************************
-    Displays Album Art on a 320 x 240 ESP32.
+    Displays current time on a 320 x 240 ESP32.
 
     Parts:
     ESP32 With Built in 320x240 LCD with Touch Screen (ESP32-2432S028R)
@@ -25,11 +25,6 @@
 #define YELLOW_DISPLAY // Default to Yellow Display for display type
 #endif
 
-#define NFC_ENABLED 1
-
-// This causes issues in certain circumstances e.g. Play an album and let it auto play to related songs
-bool writeContextToNfc = true;
-
 // ----------------------------
 // Library Defines - Need to be defined before library import
 // ----------------------------
@@ -41,7 +36,8 @@ bool writeContextToNfc = true;
 // ----------------------------
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
-
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 #include <FS.h>
 #include "SPIFFS.h"
 
@@ -61,36 +57,14 @@ bool writeContextToNfc = true;
 // Can be installed from the library manager (Search for "ESP_DoubleResetDetector")
 // https://github.com/khoih-prog/ESP_DoubleResetDetector
 
-#include <SpotifyArduino.h>
-
-// including a "spotify_server_cert" variable
-// header is included as part of the SpotifyArduino libary
-#include <SpotifyArduinoCert.h>
-
-#include <ArduinoJson.h>
-
 WiFiClientSecure client;
-
-//------- Replace the following! ------
-
-// Country code, including this is advisable
-#define SPOTIFY_MARKET "IE"
-//------- ---------------------- ------
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000); // Update every minute
 
 // ----------------------------
 // Internal includes
 // ----------------------------
-#include "refreshToken.h"
-
-#include "spotifyDisplay.h"
-
-#include "spotifyLogic.h"
-
-#include "configFile.h"
-
-#include "serialPrint.h"
-
-#include "WifiManagerHandler.h"
+#include "wifiManagerHandler.h"
 
 // ----------------------------
 // Display Handling Code
@@ -100,23 +74,19 @@ WiFiClientSecure client;
 
 #include "cheapYellowLCD.h"
 CheapYellowDisplay cyd;
-SpotifyDisplay *spotifyDisplay = &cyd;
+SpotifyDisplay *display = &cyd;
 
 #elif defined MATRIX_DISPLAY
 #include "matrixDisplay.h"
 MatrixDisplay matrixDisplay;
-SpotifyDisplay *spotifyDisplay = &matrixDisplay;
+SpotifyDisplay *display = &matrixDisplay;
 
 #endif
 // ----------------------------
 
-#ifdef NFC_ENABLED
-#include "nfc.h"
-#endif
-
 void drawWifiManagerMessage(WiFiManager *myWiFiManager)
 {
-  spotifyDisplay->drawWifiManagerMessage(myWiFiManager);
+  display->drawWifiManagerMessage(myWiFiManager);
 }
 
 void setup()
@@ -132,24 +102,9 @@ void setup()
     forceConfig = true;
   }
 
-  spotifyDisplay->displaySetup(&spotify);
-
-#ifdef NFC_ENABLED
-  if (nfcSetup(&spotify, spotifyDisplay))
-  {
-    Serial.println("NFC Good");
-  }
-  else
-  {
-    Serial.println("NFC Bad");
-  }
-#endif
+  display->displaySetup(nullptr);
 
   // Initialise SPIFFS, if this fails try .begin(true)
-  // NOTE: I believe this formats it though it will erase everything on
-  // spiffs already! In this example that is not a problem.
-  // I have found once I used the true flag once, I could use it
-  // without the true flag after that.
   bool spiffsInitSuccess = SPIFFS.begin(false) || SPIFFS.begin(true);
   if (!spiffsInitSuccess)
   {
@@ -159,75 +114,23 @@ void setup()
   }
   Serial.println("\r\nInitialisation done.");
 
-  refreshToken[0] = '\0';
-  if (!fetchConfigFile(refreshToken, clientId, clientSecret))
-  {
-    // Failed to fetch config file, need to launch Wifi Manager
-    forceConfig = true;
-  }
-
-  setupWiFiManager(forceConfig, refreshToken, &saveConfigFile, &drawWifiManagerMessage);
+  setupWiFiManager(forceConfig, &drawWifiManagerMessage);
 
   // If we are here we should be connected to the Wifi
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  spotifySetup(spotifyDisplay, clientId, clientSecret);
-
-#if defined YELLOW_DISPLAY
-
-  pinMode(0, INPUT); // has an internal pullup
-  bool forceRefreshToken = digitalRead(0) == LOW;
-  if (forceRefreshToken)
-  {
-    Serial.println("GPIO 0 is low, forcing refreshToken");
-  }
-
-#else
-  bool forceRefreshToken = false;
-
-#endif
-
-  // Check if we have a refresh Token
-  if (forceRefreshToken || refreshToken[0] == '\0')
-  {
-
-    spotifyDisplay->drawRefreshTokenMessage();
-    Serial.println("Launching refresh token flow");
-    if (launchRefreshTokenFlow(&spotify, clientId))
-    {
-      Serial.print("Refresh Token: ");
-      Serial.println(refreshToken);
-      saveConfigFile(refreshToken, clientId, clientSecret);
-    }
-  }
-
-  spotifyRefreshToken(refreshToken);
-
-  spotifyDisplay->showDefaultScreen();
+  timeClient.begin();
+  display->showDefaultScreen();
 }
 
 void loop()
 {
   drd->loop();
+  timeClient.update();
 
-  spotifyDisplay->checkForInput();
+  String formattedTime = timeClient.getFormattedTime();
+  display->printTimeToScreen(formattedTime);
 
-  bool forceUpdate = false;
-
-#ifdef NFC_ENABLED
-  if (writeContextToNfc)
-  {
-    forceUpdate = nfcLoop(lastTrackUri, lastTrackContextUri);
-  }
-  else
-  {
-    forceUpdate = nfcLoop(lastTrackUri);
-  }
-
-#endif
-
-  updateCurrentlyPlaying(forceUpdate);
-
-  updateProgressBar();
+  delay(1000); // Update every second
 }

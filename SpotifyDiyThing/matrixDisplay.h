@@ -162,7 +162,14 @@ class MatrixDisplay: public SpotifyDisplay {
       return imageStatus;
     }
 
-
+    void printTimeToScreen(String time) {
+      dma_display->fillScreen(myBLACK);
+      dma_display->setTextSize(1);
+      dma_display->setTextWrap(false);
+      dma_display->setTextColor(myWHITE);
+      dma_display->setCursor(0, 0);
+      dma_display->print(time);
+    }
 
     //NFC tag messages
     void markDisplayAsTagRead() {
